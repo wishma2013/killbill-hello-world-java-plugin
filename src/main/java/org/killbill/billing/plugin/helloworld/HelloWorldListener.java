@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -146,7 +147,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                  * }
                                  */
                                 if (null != result && result.get("status").equals("ok") && null != result.get("data")) {
-                                    JSONArray details = (JSONArray)((JSONObject)result.get("data")).get("detail");
+                                    JSONArray details = (JSONArray)((LinkedHashMap)result.get("data")).get("detail");
                                     if (null != details && details.size() > 0) {
                                         for (int i=0 ;i < details.size() ; i++) {
                                             JSONObject detail = (JSONObject)details.get(i);
