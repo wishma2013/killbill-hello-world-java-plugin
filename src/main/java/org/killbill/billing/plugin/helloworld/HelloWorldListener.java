@@ -118,7 +118,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
 
                                 Account account = osgiKillbillAPI.getAccountUserApi().getAccountById(killbillEvent.getAccountId(), context);
 
-                                uri.replace("{orgName}", account.getExternalKey());
+                                uri = uri.replace("{orgName}", account.getExternalKey());
                                 // 查询赠送金账户
                                 JSONObject result = httpClient.doCall("GET", uri, null, querys, Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
 
@@ -155,8 +155,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                 }
                                 // 抵扣账单
                                 String uri_pay = "/presented/{orgName}/pay/to/{targetId}";
-                                uri_pay.replace("{orgName}", account.getExternalKey());
-                                uri_pay.replace("{targetId}", invoice.getId().toString());
+                                uri_pay = uri_pay.replace("{orgName}", account.getExternalKey()).replace("{targetId}", invoice.getId().toString());
 
                                 /**
                                  * {
@@ -206,8 +205,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                 } else {
                                     // 失败记录error日志
                                     String uri_logfail = "/presented/{orgName}/pay/fail/{targetId}";
-                                    uri_logfail.replace("{orgName}", account.getExternalKey());
-                                    uri_logfail.replace("{targetId}", invoice.getId().toString());
+                                    uri_logfail = uri_logfail.replace("{orgName}", account.getExternalKey()).replace("{targetId}", invoice.getId().toString());
                                     httpClient.doCall("POST", uri_logfail, null, Collections.emptyMap(), Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
                                 }
                             }
