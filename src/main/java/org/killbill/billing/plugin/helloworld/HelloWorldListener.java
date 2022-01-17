@@ -19,15 +19,43 @@
 
 package org.killbill.billing.plugin.helloworld;
 
+import java.io.IOException;
+import java.math.BigDecimal;
+import java.net.URISyntaxException;
+import java.security.GeneralSecurityException;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
+import java.util.function.Consumer;
+
+import org.joda.time.LocalDate;
+import org.jooq.tools.json.JSONArray;
+import org.jooq.tools.json.JSONObject;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
+import org.killbill.billing.entitlement.api.Subscription;
+import org.killbill.billing.entitlement.api.SubscriptionApiException;
+import org.killbill.billing.invoice.api.Invoice;
+import org.killbill.billing.invoice.api.InvoiceApiException;
+import org.killbill.billing.invoice.api.InvoiceItem;
+import org.killbill.billing.invoice.api.InvoiceItemType;
+import org.killbill.billing.invoice.api.InvoiceUserApi;
 import org.killbill.billing.notification.plugin.api.ExtBusEvent;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillAPI;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillEventDispatcher;
 import org.killbill.billing.plugin.api.PluginTenantContext;
+import org.killbill.billing.plugin.helloworld.biz.RemoteHttpClient;
+import org.killbill.billing.plugin.util.http.InvalidRequest;
+import org.killbill.billing.plugin.util.http.ResponseFormat;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
 
 public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillbillEventHandler {
 
@@ -48,10 +76,214 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
 
         final TenantContext context = new PluginTenantContext(killbillEvent.getAccountId(), killbillEvent.getTenantId());
         switch (killbillEvent.getEventType()) {
+            case INVOICE_CREATION:
+                try{
+                    final Invoice invoice = osgiKillbillAPI.getInvoiceUserApi().getInvoice(killbillEvent.getObjectId(), context);
+                    final List<InvoiceItem> invoiceItem = osgiKillbillAPI.getInvoiceUserApi().getInvoiceItemsByParentInvoice(invoice.getId(), context);
+
+                    logger.info("toria 账单查看invoice：{}", invoice);
+                    logger.info("toria 账单查看invoiceItem：{}", invoiceItem);
+
+
+                    // 1.检查账户余额
+                    // 2.调用easemob billing 查询赠送金 api
+                    // 3.调用easemob billing 抵扣赠送金 api
+                    /**
+                     * HttpClient(final String url,
+                     *                       final String username,
+                     *                       final String password,
+                     *                       final String proxyHost,
+                     *                       final Integer proxyPort,
+                     *                       final Boolean strictSSL,
+                     *                       final int connectTimeoutMs,
+                     *                       final int readTimeoutMs)
+                     */
+                    try {
+                        //0.查账单金额
+                        if (invoice.getBalance().compareTo(BigDecimal.ZERO) > 0 ) {
+                            //1.先查账户余额
+                            //                                        AuditUserApi auditUserApi = osgiKillbillAPI.getAuditUserApi();
+                            //                                        AccountUserApi accountUserApi = osgiKillbillAPI.getAccountUserApi();
+                            //                                        final Account account = accountUserApi.getAccountById(killbillEvent.getAccountId(), context);
+                            //                                        final AccountAuditLogs accountAuditLogs = auditUserApi.getAccountAuditLogs(account.getId(), AuditLevel.NONE, context);
+
+                            InvoiceUserApi invoiceApi = osgiKillbillAPI.getInvoiceUserApi();
+                            final BigDecimal accountBalance = invoiceApi.getAccountBalance(killbillEvent.getAccountId(), context);
+                            if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费。时机需要确认。
+                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.103:31487", "", "", null, null, false, 2000, 60000);
+                                Map querys = new HashMap<String, String>();
+                                querys.put("withDetail","true");
+                                querys.put("withExpend","true");
+                                String uri = "/presented/{orgName}";
+
+                                Account account = osgiKillbillAPI.getAccountUserApi().getAccountById(killbillEvent.getAccountId(), context);
+
+                                uri.replace("{orgName}", account.getExternalKey());
+                                // 查询赠送金账户
+                                JSONObject result = httpClient.doCall("GET", uri, null, querys, Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
+
+                                /**
+                                 * 遍历如下结果中的 detail -> product == invoiceItem.planName.startWith
+                                 * detail -> amount <= invoice.getBalance
+                                 * {
+                                 *     "status": "ok",
+                                 *     "data": {
+                                 *         "balance": 198.0,
+                                 *         "detail": [
+                                 *             {
+                                 *                 "amount": 198.00,
+                                 *                 "product": "IM"
+                                 *             }
+                                 *         ]
+                                 *     },
+                                 *     "error": null,
+                                 *     "timestamp": 1642380495574
+                                 * }
+                                 */
+                                if (null != result && result.get("status").equals("ok") && null != result.get("data")) {
+                                    JSONArray details = (JSONArray)((JSONObject)result.get("data")).get("detail");
+                                    if (null != details && details.size() > 0) {
+                                        for (int i=0 ;i < details.size() ; i++) {
+                                            JSONObject detail = (JSONObject)details.get(i);
+                                            double amount = (double)detail.get("amount");
+                                            String product = (String)detail.get("product");
+                                            if (!Strings.isNullOrEmpty(product)) { // 留给billing去判断
+
+                                            }
+                                        }
+                                    }
+                                }
+                                // 抵扣账单
+                                String uri_pay = "/presented/{orgName}/pay/to/{targetId}";
+                                uri_pay.replace("{orgName}", account.getExternalKey());
+                                uri_pay.replace("{targetId}", invoice.getId().toString());
+
+                                /**
+                                 * {
+                                 *     "amount":2,
+                                 *     "associatedEntityId":"ac86cb73-46a3-44b6-bc24-6cbf89282c4c",
+                                 *     "product":"IM",
+                                 *     "reason":"2021-11-11大促A类优惠券抵扣",
+                                 *     "salesman":"史梁"
+                                 * }
+                                 * @return
+                                 */
+
+                                Map payBody = new HashMap(5);
+                                payBody.put("amount", invoice.getBalance().doubleValue());
+                                payBody.put("associatedEntityId", invoice.getId().toString());
+                                payBody.put("product", "");
+                                payBody.put("reason", "赠送金账单自动抵扣_" + account.getExternalKey() + "_" + invoice.getId().toString());
+                                payBody.put("salesman", "killbill");
+
+
+                                JSONObject result_pay = httpClient.doCall("POST", uri_pay, JSONObject.toJSONString(payBody), Collections.emptyMap(), Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
+
+
+                                /**
+                                 * 抵扣接口返回
+                                 *
+                                 * {
+                                 *     "status": "ok",
+                                 *     "data": {
+                                 *         "ownerName": null,
+                                 *         "type": 0,
+                                 *         "reason": "2021-11-11大促A类优惠券抵扣",
+                                 *         "associatedEntityId": "ac86cb73-46a3-44b6-bc24-6cbf89282c4c",
+                                 *         "rule": null,
+                                 *         "product": "IM",
+                                 *         "amount": 2.0,
+                                 *         "salesman": "史梁",
+                                 *         "currency": null,
+                                 *         "itemType": null
+                                 *     },
+                                 *     "error": null,
+                                 *     "timestamp": 1642379834731
+                                 * }
+                                 */
+                                if (null != result_pay && result_pay.get("status").equals("ok")) {
+                                    // 成功继续
+                                } else {
+                                    // 失败记录error日志
+                                    String uri_logfail = "/presented/{orgName}/pay/fail/{targetId}";
+                                    uri_logfail.replace("{orgName}", account.getExternalKey());
+                                    uri_logfail.replace("{targetId}", invoice.getId().toString());
+                                    httpClient.doCall("POST", uri_logfail, null, Collections.emptyMap(), Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
+                                }
+                            }
+                        }
+
+
+
+
+                        //                                    httpClient.doCall("GET", "http://hsb-didi-guangzhou-mesos-slave4:31487");
+                        /**
+                         * (final String verb, final String uri, final String body, final Map<String, String> queryParams,
+                         *                         final Map<String, String> headers, final Class<T> clazz, final ResponseFormat format)
+                         */
+
+                    } catch (GeneralSecurityException e) {
+                        e.printStackTrace();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    } catch (URISyntaxException e) {
+                        e.printStackTrace();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    } catch (TimeoutException e) {
+                        e.printStackTrace();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    } catch (InvalidRequest invalidRequest) {
+                        invalidRequest.printStackTrace();
+                    } catch (AccountApiException e) {
+                        e.printStackTrace();
+                    }
+
+                    invoiceItem.forEach(new Consumer<InvoiceItem>() {
+                        @Override
+                        public void accept(final InvoiceItem invoiceItem) {
+                            if(invoiceItem.getInvoiceItemType().equals(InvoiceItemType.USAGE)) {
+//                                if(invoiceItem.getProductName().startsWith("IM-")) //新版计划usage按不足月比例折扣
+//                                {
+                                    //查询订阅开始日期 与 账单开始日期对比，如果相同且不等于 BCD 则为不足月
+                                    UUID sId = invoiceItem.getSubscriptionId();
+
+                                    try {
+                                        Subscription subscription = osgiKillbillAPI.getSubscriptionApi().getSubscriptionForExternalKey(sId.toString(), context);
+                                        logger.info("toria 账单查看用量获取订阅：{}", subscription);
+                                        if(subscription != null &&
+                                           !subscription.getEffectiveStartDate().equals(subscription.getBillingStartDate())){// 生效日期 与 计费开始日期
+                                            LocalDate effectiveStartDate = subscription.getEffectiveStartDate();
+                                            LocalDate billingStartDate = subscription.getBillingStartDate();
+                                            if (billingStartDate.minusMonths(1).getMonthOfYear() == effectiveStartDate.getMonthOfYear()) { // 上个月订阅
+
+                                            }
+                                        }
+                                    } catch (SubscriptionApiException e) {
+                                        e.printStackTrace();
+                                    }
+                            }
+                        }
+                    });
+                    logger.info("toria get invoice {} ", invoice);
+                    logger.info("toria get invoiceItem {} ", invoiceItem);
+                    logger.info("toria");
+                } catch (final InvoiceApiException e) {
+                    logger.error("toria error when get invoice", e);
+                }
+                break;
             //
             // Handle ACCOUNT_CREATION and ACCOUNT_CHANGE only for demo purpose and just print the account
             //
             case ACCOUNT_CREATION:
+                try {
+                    final Account account = osgiKillbillAPI.getAccountUserApi().getAccountById(killbillEvent.getAccountId(), context);
+                    logger.info("Account information: " + account);
+                } catch (final AccountApiException e) {
+                    logger.warn("Unable to find account", e);
+                }
+                break;
             case ACCOUNT_CHANGE:
                 try {
                     final Account account = osgiKillbillAPI.getAccountUserApi().getAccountById(killbillEvent.getAccountId(), context);
@@ -61,10 +293,11 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                 }
                 break;
 
-            // Nothing
             default:
                 break;
 
         }
     }
+
+
 }
