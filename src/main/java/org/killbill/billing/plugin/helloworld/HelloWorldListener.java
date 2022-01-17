@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -34,7 +35,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
 import org.joda.time.LocalDate;
-import org.jooq.tools.json.JSONArray;
 import org.jooq.tools.json.JSONObject;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
@@ -147,7 +147,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                  * }
                                  */
                                 if (null != result && result.get("status").equals("ok") && null != result.get("data")) {
-                                    JSONArray details = (JSONArray)((LinkedHashMap)result.get("data")).get("detail");
+                                    ArrayList details = (ArrayList)((LinkedHashMap)result.get("data")).get("detail");
                                     if (null != details && details.size() > 0) {
                                         for (int i=0 ;i < details.size() ; i++) {
                                             JSONObject detail = (JSONObject)details.get(i);
