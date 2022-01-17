@@ -150,7 +150,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                     ArrayList details = (ArrayList)((LinkedHashMap)result.get("data")).get("detail");
                                     if (null != details && details.size() > 0) {
                                         for (int i=0 ;i < details.size() ; i++) {
-                                            JSONObject detail = (JSONObject)details.get(i);
+                                            LinkedHashMap detail = (LinkedHashMap)details.get(i);
                                             double amount = (double)detail.get("amount");
                                             String product = (String)detail.get("product");
                                             if (!Strings.isNullOrEmpty(product)) { // 留给billing去判断
