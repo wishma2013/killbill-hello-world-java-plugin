@@ -115,8 +115,8 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                             logger.info("toria get invoiceCreditedAmount:{}", invoice.getCreditedAmount());
                             logger.info("toria get invoiceOriginalChargedAmount:{}", invoice.getOriginalChargedAmount());
                             if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费。时机需要确认。
-//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.103:31487", "", "", null, null, false, 2000, 60000);
-                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
+                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.103:31487", "", "", null, null, false, 2000, 60000);
+//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
                                 Map querys = new HashMap<String, String>();
                                 querys.put("withDetail","true");
                                 querys.put("withExpend","true");
@@ -177,7 +177,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                 Map payBody = new HashMap(5);
                                 payBody.put("amount", invoice.getBalance().doubleValue());
                                 payBody.put("associatedEntityId", invoice.getId().toString());
-                                payBody.put("product", "");
+                                payBody.put("product", "IM");
                                 payBody.put("reason", "赠送金账单自动抵扣_" + account.getExternalKey() + "_" + invoice.getId().toString());
                                 payBody.put("salesman", "killbill");
 
