@@ -25,8 +25,8 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -165,7 +165,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                  */
 
                                 StringBuilder products = new StringBuilder();
-                                Set productSet = Collections.emptySet();
+                                LinkedHashSet productSet = new LinkedHashSet(1);
                                 invoice.getInvoiceItems().stream().forEach(invoiceItem ->
                                                                                    productSet.add(ProductLine.findStartWith(invoiceItem.getProductName())));
                                 productSet.stream().forEach(p -> products.append("/"));
