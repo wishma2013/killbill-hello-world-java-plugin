@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -171,7 +172,9 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                 LinkedHashSet productSet = new LinkedHashSet(1);
                                 invoice.getInvoiceItems().stream().forEach(invoiceItem ->
                                                                                    productSet.add(ProductLine.findStartWith(invoiceItem.getProductName())));
-                                productSet.stream().forEach(p -> products.append("/"));
+                                for (Iterator iterator = productSet.iterator(); iterator.hasNext() ; ) {
+                                    products = products.append(iterator.next()).append("/");
+                                }
                                 Map payBody = new HashMap(5);
                                 payBody.put("amount", accountBalance);//抵扣欠款最高额度
                                 payBody.put("associatedEntityId", invoice.getId().toString());
