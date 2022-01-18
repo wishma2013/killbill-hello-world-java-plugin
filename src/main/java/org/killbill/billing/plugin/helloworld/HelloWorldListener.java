@@ -23,40 +23,30 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
-import java.util.UUID;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Consumer;
 
-import org.joda.time.LocalDate;
 import org.jooq.tools.json.JSONObject;
 import org.killbill.billing.account.api.Account;
 import org.killbill.billing.account.api.AccountApiException;
-import org.killbill.billing.entitlement.api.Subscription;
-import org.killbill.billing.entitlement.api.SubscriptionApiException;
 import org.killbill.billing.invoice.api.Invoice;
 import org.killbill.billing.invoice.api.InvoiceApiException;
-import org.killbill.billing.invoice.api.InvoiceItem;
-import org.killbill.billing.invoice.api.InvoiceItemType;
 import org.killbill.billing.invoice.api.InvoiceUserApi;
 import org.killbill.billing.notification.plugin.api.ExtBusEvent;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillAPI;
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillEventDispatcher;
 import org.killbill.billing.plugin.api.PluginTenantContext;
+import org.killbill.billing.plugin.helloworld.biz.ProductLine;
 import org.killbill.billing.plugin.helloworld.biz.RemoteHttpClient;
 import org.killbill.billing.plugin.util.http.InvalidRequest;
 import org.killbill.billing.plugin.util.http.ResponseFormat;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Strings;
 
 public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillbillEventHandler {
 
@@ -80,10 +70,9 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
             case INVOICE_CREATION:
                 try{
                     final Invoice invoice = osgiKillbillAPI.getInvoiceUserApi().getInvoice(killbillEvent.getObjectId(), context);
-                    final List<InvoiceItem> invoiceItem = osgiKillbillAPI.getInvoiceUserApi().getInvoiceItemsByParentInvoice(invoice.getId(), context);
+//                    final List<InvoiceItem> invoiceItem = osgiKillbillAPI.getInvoiceUserApi().getInvoiceItemsByParentInvoice(invoice.getId(), context);
 
                     logger.info("toria 账单查看invoice：{}", invoice);
-                    logger.info("toria 账单查看invoiceItem：{}", invoiceItem);
 
 
                     // 1.检查账户余额
@@ -114,19 +103,19 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                             logger.info("toria get invoiceBalance:{}", invoice.getBalance());
                             logger.info("toria get invoiceCreditedAmount:{}", invoice.getCreditedAmount());
                             logger.info("toria get invoiceOriginalChargedAmount:{}", invoice.getOriginalChargedAmount());
-                            if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费。时机需要确认。
-                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.103:31487", "", "", null, null, false, 2000, 60000);
-//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
-                                Map querys = new HashMap<String, String>();
-                                querys.put("withDetail","true");
-                                querys.put("withExpend","true");
-                                String uri = "/presented/{orgName}";
+                            if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费才抵扣。
+//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.103:31487", "", "", null, null, false, 2000, 60000);
+                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
+//                                Map querys = new HashMap<String, String>(2);
+//                                querys.put("withDetail","true");
+//                                querys.put("withExpend","true");
+//                                String uri = "/presented/{orgName}";
 
                                 Account account = osgiKillbillAPI.getAccountUserApi().getAccountById(killbillEvent.getAccountId(), context);
 
-                                uri = uri.replace("{orgName}", account.getExternalKey());
-                                // 查询赠送金账户
-                                JSONObject result = httpClient.doCall("GET", uri, null, querys, Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
+//                                uri = uri.replace("{orgName}", account.getExternalKey());
+//                                // 查询赠送金账户
+//                                JSONObject result = httpClient.doCall("GET", uri, null, querys, Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
 
                                 /**
                                  * 遍历如下结果中的 detail -> product == invoiceItem.planName.startWith
@@ -146,21 +135,22 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                  *     "timestamp": 1642380495574
                                  * }
                                  */
-                                if (null != result && result.get("status").equals("ok") && null != result.get("data")) {
-                                    ArrayList details = (ArrayList)((LinkedHashMap)result.get("data")).get("detail");
-                                    if (null != details && details.size() > 0) {
-                                        for (int i=0 ;i < details.size() ; i++) {
-                                            LinkedHashMap detail = (LinkedHashMap)details.get(i);
-                                            double amount = (double)detail.get("amount");
-                                            String product = (String)detail.get("product");
-                                            if (!Strings.isNullOrEmpty(product)) { // 留给billing去判断
-
-                                            }
-                                        }
-                                    }
-                                }
+//                                if (null != result && result.get("status").equals("ok") && null != result.get("data")) {
+//                                    ArrayList details = (ArrayList)((LinkedHashMap)result.get("data")).get("detail");
+//                                    if ((double)result.get("balance") > 0 || (null != details && details.size() > 0)) {
+////                                        for (int i=0 ;i < details.size() ; i++) {
+////                                            LinkedHashMap detail = (LinkedHashMap)details.get(i);
+////                                            double amount = (double)detail.get("amount");
+////                                            String product = (String)detail.get("product");
+////                                            if (!Strings.isNullOrEmpty(product)) { // 留给billing去判断
+////
+////                                            }
+////                                        }
+//
+//                                    }
+//                                }
                                 // 抵扣账单
-                                String uri_pay = "/presented/{orgName}/pay/to/{targetId}";
+                                String uri_pay = "/presented/{orgName}/pay/to/{targetId}/internal";
                                 uri_pay = uri_pay.replace("{orgName}", account.getExternalKey()).replace("{targetId}", invoice.getId().toString());
 
                                 /**
@@ -174,15 +164,23 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                  * @return
                                  */
 
+                                StringBuilder products = new StringBuilder();
+                                Set productSet = Collections.emptySet();
+                                invoice.getInvoiceItems().stream().forEach(invoiceItem ->
+                                                                                   productSet.add(ProductLine.findStartWith(invoiceItem.getProductName())));
+                                productSet.stream().forEach(p -> products.append("/"));
                                 Map payBody = new HashMap(5);
-                                payBody.put("amount", invoice.getBalance().doubleValue());
+                                payBody.put("amount", accountBalance);//抵扣欠款最高额度
                                 payBody.put("associatedEntityId", invoice.getId().toString());
-                                payBody.put("product", "IM");
-                                payBody.put("reason", "赠送金账单自动抵扣_" + account.getExternalKey() + "_" + invoice.getId().toString());
+                                payBody.put("product", products.length() > 0 ?
+                                                       products.append(ProductLine.ANY.name()).toString() : ProductLine.IM.name());
+                                payBody.put("reason", "赠送金账单系统自动抵扣_" + account.getExternalKey() + "_" + invoice.getId().toString());
                                 payBody.put("salesman", "killbill");
 
+                                Map<String, String> headers = new HashMap<>(1);
+                                headers.put("Content-Type", "application/json");
 
-                                JSONObject result_pay = httpClient.doCall("POST", uri_pay, JSONObject.toJSONString(payBody), Collections.emptyMap(), Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
+                                JSONObject result_pay = httpClient.doCall("POST", uri_pay, JSONObject.toJSONString(payBody), Collections.emptyMap(), headers, JSONObject.class, ResponseFormat.JSON);
 
 
                                 /**
@@ -209,10 +207,10 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                 if (null != result_pay && result_pay.get("status").equals("ok")) {
                                     // 成功继续
                                 } else {
-                                    // 失败记录error日志
-                                    String uri_logfail = "/presented/{orgName}/pay/fail/{targetId}";
-                                    uri_logfail = uri_logfail.replace("{orgName}", account.getExternalKey()).replace("{targetId}", invoice.getId().toString());
-                                    httpClient.doCall("POST", uri_logfail, null, Collections.emptyMap(), Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
+                                    // 失败记录error日志。改由billing记录。
+//                                    String uri_logfail = "/presented/{orgName}/pay/fail/{targetId}";
+//                                    uri_logfail = uri_logfail.replace("{orgName}", account.getExternalKey()).replace("{targetId}", invoice.getId().toString());
+//                                    httpClient.doCall("POST", uri_logfail, null, Collections.emptyMap(), Collections.emptyMap(), JSONObject.class, ResponseFormat.JSON);
                                 }
                             }
                         }
@@ -244,35 +242,32 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                         e.printStackTrace();
                     }
 
-                    invoiceItem.forEach(new Consumer<InvoiceItem>() {
-                        @Override
-                        public void accept(final InvoiceItem invoiceItem) {
-                            if(invoiceItem.getInvoiceItemType().equals(InvoiceItemType.USAGE)) {
-//                                if(invoiceItem.getProductName().startsWith("IM-")) //新版计划usage按不足月比例折扣
-//                                {
-                                    //查询订阅开始日期 与 账单开始日期对比，如果相同且不等于 BCD 则为不足月
-                                    UUID sId = invoiceItem.getSubscriptionId();
-
-                                    try {
-                                        Subscription subscription = osgiKillbillAPI.getSubscriptionApi().getSubscriptionForExternalKey(sId.toString(), context);
-                                        logger.info("toria 账单查看用量获取订阅：{}", subscription);
-                                        if(subscription != null &&
-                                           !subscription.getEffectiveStartDate().equals(subscription.getBillingStartDate())){// 生效日期 与 计费开始日期
-                                            LocalDate effectiveStartDate = subscription.getEffectiveStartDate();
-                                            LocalDate billingStartDate = subscription.getBillingStartDate();
-                                            if (billingStartDate.minusMonths(1).getMonthOfYear() == effectiveStartDate.getMonthOfYear()) { // 上个月订阅
-
-                                            }
-                                        }
-                                    } catch (SubscriptionApiException e) {
-                                        e.printStackTrace();
-                                    }
-                            }
-                        }
-                    });
-                    logger.info("toria get invoice {} ", invoice);
-                    logger.info("toria get invoiceItem {} ", invoiceItem);
-                    logger.info("toria");
+//                    invoiceItem.forEach(new Consumer<InvoiceItem>() {
+//                        @Override
+//                        public void accept(final InvoiceItem invoiceItem) {
+//                            if(invoiceItem.getInvoiceItemType().equals(InvoiceItemType.USAGE)) {
+////                                if(invoiceItem.getProductName().startsWith("IM-")) //新版计划usage按不足月比例折扣
+////                                {
+//                                    //查询订阅开始日期 与 账单开始日期对比，如果相同且不等于 BCD 则为不足月
+//                                    UUID sId = invoiceItem.getSubscriptionId();
+//
+//                                    try {
+//                                        Subscription subscription = osgiKillbillAPI.getSubscriptionApi().getSubscriptionForExternalKey(sId.toString(), context);
+//                                        logger.info("toria 账单查看用量获取订阅：{}", subscription);
+//                                        if(subscription != null &&
+//                                           !subscription.getEffectiveStartDate().equals(subscription.getBillingStartDate())){// 生效日期 与 计费开始日期
+//                                            LocalDate effectiveStartDate = subscription.getEffectiveStartDate();
+//                                            LocalDate billingStartDate = subscription.getBillingStartDate();
+//                                            if (billingStartDate.minusMonths(1).getMonthOfYear() == effectiveStartDate.getMonthOfYear()) { // 上个月订阅
+//
+//                                            }
+//                                        }
+//                                    } catch (SubscriptionApiException e) {
+//                                        e.printStackTrace();
+//                                    }
+//                            }
+//                        }
+//                    });
                 } catch (final InvoiceApiException e) {
                     logger.error("toria error when get invoice", e);
                 }
