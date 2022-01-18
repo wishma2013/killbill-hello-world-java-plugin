@@ -73,6 +73,9 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
 //                    final List<InvoiceItem> invoiceItem = osgiKillbillAPI.getInvoiceUserApi().getInvoiceItemsByParentInvoice(invoice.getId(), context);
 
                     logger.info("toria 账单查看invoice：{}", invoice);
+                    logger.info("toria 账单查看invoiceItems：{}", invoice.getInvoiceItems());
+                    logger.info("toria 账单查看invoiceItems[0].planName：{}", invoice.getInvoiceItems().get(0).getPlanName());
+                    logger.info("toria 账单查看invoiceItems[0].productLine：{}", ProductLine.findStartWith(invoice.getInvoiceItems().get(0).getPlanName()));
 
 
                     // 1.检查账户余额
