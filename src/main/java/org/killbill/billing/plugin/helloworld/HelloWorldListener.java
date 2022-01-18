@@ -49,6 +49,8 @@ import org.killbill.billing.util.callcontext.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Strings;
+
 public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillbillEventHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(HelloWorldListener.class);
@@ -170,8 +172,9 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
 
                                 StringBuilder products = new StringBuilder();
                                 LinkedHashSet productSet = new LinkedHashSet(1);
-                                invoice.getInvoiceItems().stream().forEach(invoiceItem ->
-                                                                                   productSet.add(ProductLine.findStartWith(invoiceItem.getProductName())));
+                                invoice.getInvoiceItems().stream().filter( f -> !Strings.isNullOrEmpty(f.getPlanName()))
+                                                                    .forEach(invoiceItem ->
+                                                                                     productSet.add(ProductLine.findStartWith(invoiceItem.getProductName())));
 
                                 for (Iterator iterator = productSet.iterator(); iterator.hasNext() ; ) {
                                     products.append(iterator.next()).append("/");
