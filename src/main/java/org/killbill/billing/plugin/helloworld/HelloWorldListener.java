@@ -172,8 +172,9 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                                 LinkedHashSet productSet = new LinkedHashSet(1);
                                 invoice.getInvoiceItems().stream().forEach(invoiceItem ->
                                                                                    productSet.add(ProductLine.findStartWith(invoiceItem.getProductName())));
+
                                 for (Iterator iterator = productSet.iterator(); iterator.hasNext() ; ) {
-                                    products = products.append(iterator.next()).append("/");
+                                    products.append(iterator.next()).append("/");
                                 }
                                 Map payBody = new HashMap(5);
                                 payBody.put("amount", accountBalance);//抵扣欠款最高额度
