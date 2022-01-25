@@ -56,6 +56,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
     private static final Logger logger = LoggerFactory.getLogger(HelloWorldListener.class);
 
     private final OSGIKillbillAPI osgiKillbillAPI;
+    private HelloWorldConfigurationHandler helloWorldConfigurationHandler;
 
     public HelloWorldListener(final OSGIKillbillAPI killbillAPI) {
         this.osgiKillbillAPI = killbillAPI;
@@ -67,7 +68,8 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                     killbillEvent.getEventType(),
                     killbillEvent.getObjectId(),
                     killbillEvent.getObjectType());
-
+        String host = helloWorldConfigurationHandler.getConfigurable().getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
+        logger.info("hello-world-plugin config remote host:", host);
         final TenantContext context = new PluginTenantContext(killbillEvent.getAccountId(), killbillEvent.getTenantId());
         switch (killbillEvent.getEventType()) {
             case INVOICE_CREATION:
@@ -75,9 +77,6 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                     final Invoice invoice = osgiKillbillAPI.getInvoiceUserApi().getInvoice(killbillEvent.getObjectId(), context);
 //                    final List<InvoiceItem> invoiceItem = osgiKillbillAPI.getInvoiceUserApi().getInvoiceItemsByParentInvoice(invoice.getId(), context);
 
-                    logger.info("toria 账单查看invoice：{}", invoice);
-                    logger.info("toria 账单查看invoiceItems：{}", invoice.getInvoiceItems());
-                    logger.info("toria 账单查看invoiceItems[0].planName：{}", invoice.getInvoiceItems().get(0).getPlanName());
                     logger.info("toria 账单查看invoiceItems[0].productLine：{}", ProductLine.findStartWith(invoice.getInvoiceItems().get(0).getPlanName()));
 
 
@@ -110,8 +109,11 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                             logger.info("toria get invoiceCreditedAmount:{}", invoice.getCreditedAmount());
                             logger.info("toria get invoiceOriginalChargedAmount:{}", invoice.getOriginalChargedAmount());
                             if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费才抵扣。
-//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.103:31487", "", "", null, null, false, 2000, 60000);
-                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
+//                                String host = helloWorldConfigurationHandler.getConfigurable().getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
+//                                logger.info("hello-world-plugin config remote host:", host);
+                                RemoteHttpClient httpClient = new RemoteHttpClient(host, "", "", null, null, false, 2000, 60000);
+//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.124:31732", "", "", null, null, false, 2000, 60000);
+//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
 //                                Map querys = new HashMap<String, String>(2);
 //                                querys.put("withDetail","true");
 //                                querys.put("withExpend","true");

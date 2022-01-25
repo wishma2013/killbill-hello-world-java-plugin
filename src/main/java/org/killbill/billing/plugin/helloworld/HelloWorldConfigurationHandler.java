@@ -20,6 +20,7 @@
 package org.killbill.billing.plugin.helloworld;
 
 import java.util.Properties;
+import java.util.UUID;
 
 import org.killbill.billing.osgi.libs.killbill.OSGIKillbillAPI;
 import org.killbill.billing.plugin.api.notification.PluginTenantConfigurableConfigurationHandler;
@@ -60,5 +61,9 @@ public class HelloWorldConfigurationHandler extends PluginTenantConfigurableConf
     protected Properties createConfigurable(final Properties properties) {
         logger.info("New properties for region {}: {}", region, properties);
         return properties;
+    }
+
+    public Properties getConfigurable(){
+        return super.getConfigurable(UUID.fromString("1"));
     }
 }
