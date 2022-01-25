@@ -71,14 +71,6 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                     killbillEvent.getObjectId(),
                     killbillEvent.getObjectType());
         final TenantContext context = new PluginTenantContext(killbillEvent.getAccountId(), killbillEvent.getTenantId());
-        List<String> plugin_properties = new ArrayList<>(1);
-        try {
-            plugin_properties.addAll(osgiKillbillAPI.getTenantUserApi().getTenantValuesForKey("PLUGIN_CONFIG_hello-world-plugin:billing-host", context));
-            logger.info("toria get plugin property PLUGIN_CONFIG_hello-world-plugin:billing-host value:{}", plugin_properties);
-        } catch (TenantApiException e) {
-            logger.error("toria osgiKillbillAPI.getTenantUserApi().getTenantValuesForKey(\"PLUGIN_CONFIG_hello-world-plugin\", context) error");
-            e.printStackTrace();
-        }
         switch (killbillEvent.getEventType()) {
             case INVOICE_CREATION:
                 try{
@@ -116,6 +108,14 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                             logger.info("toria get invoiceCreditedAmount:{}", invoice.getCreditedAmount());
                             logger.info("toria get invoiceOriginalChargedAmount:{}", invoice.getOriginalChargedAmount());
                             if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费才抵扣。
+                                List<String> plugin_properties = new ArrayList<>(1);
+                                try {
+                                    plugin_properties.addAll(osgiKillbillAPI.getTenantUserApi().getTenantValuesForKey("PLUGIN_CONFIG_hello-world-plugin:billing-host", context));
+                                    logger.info("toria get plugin property PLUGIN_CONFIG_hello-world-plugin:billing-host value:{}", plugin_properties);
+                                } catch (TenantApiException e) {
+                                    logger.error("toria osgiKillbillAPI.getTenantUserApi().getTenantValuesForKey(\"PLUGIN_CONFIG_hello-world-plugin\", context) error");
+                                    e.printStackTrace();
+                                }
                                 RemoteHttpClient httpClient = new RemoteHttpClient(plugin_properties.get(0), "", "", null, null, false, 2000, 60000);
 //                                Map querys = new HashMap<String, String>(2);
 //                                querys.put("withDetail","true");
@@ -285,6 +285,10 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
 //                    });
                 } catch (final InvoiceApiException e) {
                     logger.error("toria error when get invoice", e);
+                    e.printStackTrace();
+                } catch (Exception e) {
+                    logger.error("catch whatever exception while plugin shouldn't interrupt any killbill process.", e);
+                    e.printStackTrace();
                 }
                 break;
             //
