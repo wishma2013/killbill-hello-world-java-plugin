@@ -23,12 +23,13 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.net.URISyntaxException;
 import java.security.GeneralSecurityException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
-import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -46,6 +47,7 @@ import org.killbill.billing.plugin.helloworld.biz.ProductLine;
 import org.killbill.billing.plugin.helloworld.biz.RemoteHttpClient;
 import org.killbill.billing.plugin.util.http.InvalidRequest;
 import org.killbill.billing.plugin.util.http.ResponseFormat;
+import org.killbill.billing.tenant.api.TenantApiException;
 import org.killbill.billing.util.callcontext.TenantContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,7 +59,6 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
     private static final Logger logger = LoggerFactory.getLogger(HelloWorldListener.class);
 
     private final OSGIKillbillAPI osgiKillbillAPI;
-    private HelloWorldConfigurationHandler helloWorldConfigurationHandler;
 
     public HelloWorldListener(final OSGIKillbillAPI killbillAPI) {
         this.osgiKillbillAPI = killbillAPI;
@@ -69,10 +70,15 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                     killbillEvent.getEventType(),
                     killbillEvent.getObjectId(),
                     killbillEvent.getObjectType());
-        Properties ps = helloWorldConfigurationHandler.getConfigurable();
-        String host = ps.getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
-        logger.info("hello-world-plugin config remote host:", host);
         final TenantContext context = new PluginTenantContext(killbillEvent.getAccountId(), killbillEvent.getTenantId());
+        List<String> plugin_properties = new ArrayList<>(1);
+        try {
+            plugin_properties.addAll(osgiKillbillAPI.getTenantUserApi().getTenantValuesForKey("PLUGIN_CONFIG_hello-world-plugin:billing-host", context));
+            logger.info("toria get plugin property PLUGIN_CONFIG_hello-world-plugin:billing-host value:{}", plugin_properties);
+        } catch (TenantApiException e) {
+            logger.error("toria osgiKillbillAPI.getTenantUserApi().getTenantValuesForKey(\"PLUGIN_CONFIG_hello-world-plugin\", context) error");
+            e.printStackTrace();
+        }
         switch (killbillEvent.getEventType()) {
             case INVOICE_CREATION:
                 try{
@@ -113,7 +119,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                             if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费才抵扣。
 //                                String host = helloWorldConfigurationHandler.getConfigurable().getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
 //                                logger.info("hello-world-plugin config remote host:", host);
-                                RemoteHttpClient httpClient = new RemoteHttpClient(host, "", "", null, null, false, 2000, 60000);
+                                RemoteHttpClient httpClient = new RemoteHttpClient(plugin_properties.get(0), "", "", null, null, false, 2000, 60000);
 //                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.124:31732", "", "", null, null, false, 2000, 60000);
 //                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
 //                                Map querys = new HashMap<String, String>(2);
