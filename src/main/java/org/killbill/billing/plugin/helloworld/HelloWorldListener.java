@@ -83,7 +83,6 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
             case INVOICE_CREATION:
                 try{
                     final Invoice invoice = osgiKillbillAPI.getInvoiceUserApi().getInvoice(killbillEvent.getObjectId(), context);
-//                    final List<InvoiceItem> invoiceItem = osgiKillbillAPI.getInvoiceUserApi().getInvoiceItemsByParentInvoice(invoice.getId(), context);
 
                     logger.info("toria 账单查看invoiceItems[0].productLine：{}", ProductLine.findStartWith(invoice.getInvoiceItems().get(0).getPlanName()));
 
@@ -117,11 +116,7 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                             logger.info("toria get invoiceCreditedAmount:{}", invoice.getCreditedAmount());
                             logger.info("toria get invoiceOriginalChargedAmount:{}", invoice.getOriginalChargedAmount());
                             if (accountBalance.compareTo(BigDecimal.ZERO) > 0) { // 有欠费才抵扣。
-//                                String host = helloWorldConfigurationHandler.getConfigurable().getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
-//                                logger.info("hello-world-plugin config remote host:", host);
                                 RemoteHttpClient httpClient = new RemoteHttpClient(plugin_properties.get(0), "", "", null, null, false, 2000, 60000);
-//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://172.16.31.124:31732", "", "", null, null, false, 2000, 60000);
-//                                RemoteHttpClient httpClient = new RemoteHttpClient("http://127.0.0.1:8081", "", "", null, null, false, 2000, 60000);
 //                                Map querys = new HashMap<String, String>(2);
 //                                querys.put("withDetail","true");
 //                                querys.put("withExpend","true");
