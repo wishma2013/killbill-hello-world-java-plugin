@@ -64,6 +64,6 @@ public class HelloWorldConfigurationHandler extends PluginTenantConfigurableConf
     }
 
     public Properties getConfigurable(){
-        return super.getConfigurable(UUID.fromString("1"));
+        return super.getConfigurable(UUID.fromString("f7a9cf52-3067-412d-974b-ec328a0216b2"));
     }
 }

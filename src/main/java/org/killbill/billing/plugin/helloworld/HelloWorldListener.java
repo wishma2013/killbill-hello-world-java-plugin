@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashSet;
 import java.util.Map;
+import java.util.Properties;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeoutException;
 
@@ -68,7 +69,8 @@ public class HelloWorldListener implements OSGIKillbillEventDispatcher.OSGIKillb
                     killbillEvent.getEventType(),
                     killbillEvent.getObjectId(),
                     killbillEvent.getObjectType());
-        String host = helloWorldConfigurationHandler.getConfigurable().getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
+        Properties ps = helloWorldConfigurationHandler.getConfigurable();
+        String host = ps.getProperty("PLUGIN_CONFIG_hello-world-plugin.remote-billing-host");
         logger.info("hello-world-plugin config remote host:", host);
         final TenantContext context = new PluginTenantContext(killbillEvent.getAccountId(), killbillEvent.getTenantId());
         switch (killbillEvent.getEventType()) {
