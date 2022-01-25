@@ -36,9 +36,11 @@ import org.killbill.billing.plugin.core.config.PluginEnvironmentConfig;
 import org.killbill.billing.plugin.core.resources.jooby.PluginApp;
 import org.killbill.billing.plugin.core.resources.jooby.PluginAppBuilder;
 import org.osgi.framework.BundleContext;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class HelloWorldActivator extends KillbillActivatorBase {
-
+    private static final Logger logger = LoggerFactory.getLogger(HelloWorldActivator.class);
     //
     // Ideally that string should match the pluginName on the filesystem, but there is no enforcement
     //
@@ -50,6 +52,9 @@ public class HelloWorldActivator extends KillbillActivatorBase {
     @Override
     public void start(final BundleContext context) throws Exception {
         super.start(context);
+
+        logger.info("configProperties:", configProperties);
+        logger.info("configProperties.getProperties():", configProperties.getProperties());
 
         final String region = PluginEnvironmentConfig.getRegion(configProperties.getProperties());
 
